@@ -3,6 +3,8 @@ var scrollbar = (function () {
         $bar: null,
         $container: null,
         $content: null,
+        $blur: null,
+        containerW: 0,
         right: ".5%",
         height: 0,
         width: 10,
@@ -41,6 +43,7 @@ var scrollbar = (function () {
                     width: _scrollbar.width,
                     borderRadius: _scrollbar.width / 2,
                     backgroundColor: _scrollbar.color,
+                    zIndex: 9999,
                     // 滚动条不可选中
                     "-webkit-touch-callout": "none", /* iOS Safari */
                     "-webkit-user-select": "none",   /* Chrome/Safari/Opera */
@@ -59,16 +62,22 @@ var scrollbar = (function () {
             this.scrollHeight = this.$content.height();
         },
         getPercentage: function () {
-            this.percentage = this.viewportHeight / this.scrollHeight;
+            this.percentage = (this.viewportHeight - 2 * this.getTop()) / this.scrollHeight;
         },
         assignHeight: function () {
             this.height = this.viewportHeight * this.percentage;
             this.$bar.height(this.height);
         },
+        getContainerW: function () {
+            this.containerW = this.$container.width();
+        },
+        getTop: function() {
+            return parseFloat(this.top);
+        },
         calculateBarPos: function () {
             var scrollTop = this.$content.css("margin-top");
             scrollTop = scrollTop === "auto" ? 0 : scrollTop;
-            return (1 - (this.scrollHeight + /*这里是加号的原因 marginTop本身是0或负数*/parseFloat(scrollTop)) / this.scrollHeight) * this.viewportHeight;
+            return (1 - (this.scrollHeight + /*这里是加号的原因 marginTop本身是0或负数*/parseFloat(scrollTop)) / this.scrollHeight) * (this.viewportHeight - 2 * this.getTop());
         },
         bindEvent: function () {
             var self = this;
@@ -79,8 +88,8 @@ var scrollbar = (function () {
             // 拖动滚动条事件
             self.$bar.on("mousedown", self.mouseDownHandler);
             $(document).on("mouseup", function () {
-                $("body").off("mousemove", self.mousemoveHandler);
-                self.recoveSelect();
+                $("body").off("mousemove", self.mouseMoveHandler);
+                self.recoverSelect();
                 self.isNew = true;
             });
         },
@@ -112,16 +121,16 @@ var scrollbar = (function () {
             if (!self.isNew) {
                 return;
             }
-            $("body").on("mousemove", self.mousemoveHandler);
+            $("body").on("mousemove", self.mouseMoveHandler);
         },
-        mousemoveHandler: function mousemoveHandler(e) {
+        mouseMoveHandler: function (e) {
             var self = _scrollbar;
             self.disableSelect();
             var pageY = e.pageY;
             var diff = pageY - self.clickY;
-            var maxDiff = self.viewportHeight - self.height - parseFloat(self.top) * 2;
+            var maxDiff = self.viewportHeight - self.height - self.getTop() * 2;
             var maxScrollTop = self.scrollHeight - self.viewportHeight;
-            diff = diff > maxDiff ? maxDiff : diff;
+            diff = Math.abs(diff) > maxDiff ? maxDiff : diff;
             var disY = diff / maxDiff * maxScrollTop;
             self.moveContent("mousemove", disY);
             self.moveBar();
@@ -156,15 +165,13 @@ var scrollbar = (function () {
         },
         moveBar: function () {
             var marginTop = this.calculateBarPos();
-            var barTop = parseFloat(this.top);
-            var totalHeight = marginTop + this.height + barTop * 2; // this.top*2代表scrollbar上下预留的空间
-            marginTop = totalHeight > this.viewportHeight ? marginTop - barTop * 2 : marginTop;
             this.$bar.css({
                 marginTop: marginTop
             });
         },
         disableSelect: function () {
             // 拖动时 内容不可选
+            this.createBlur();
             this.$content.css({
                 "-webkit-touch-callout": "none", /* iOS Safari */
                 "-webkit-user-select": "none",   /* Chrome/Safari/Opera */
@@ -174,8 +181,9 @@ var scrollbar = (function () {
                 "user-select": "none",           /* Non-prefixed version, currently */
             });
         },
-        recoveSelect: function () {
+        recoverSelect: function () {
             // 拖动结束后 内容恢复可选
+            this.hideBlur();
             this.$content.css({
                 "-webkit-touch-callout": "auto", /* iOS Safari */
                 "-webkit-user-select": "auto",   /* Chrome/Safari/Opera */
@@ -184,6 +192,28 @@ var scrollbar = (function () {
                 "-ms-user-select": "auto",       /* Internet Explorer/Edge */
                 "user-select": "auto",           /* Non-prefixed version, currently */
             });
+        },
+        createBlur: function () {
+            var self = this;
+            if (self.$blur) {
+                self.$blur.show();
+                return;
+            }
+            self.$blur = $("<div></div>").addClass("yc-blur")
+                .css({
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    zIndex: 9000,
+                    backgroundColor: "#000",
+                    opacity: 0
+                });
+            self.$container.append(self.$blur);
+        },
+        hideBlur: function () {
+            this.$blur.hide();
         }
     };
 
