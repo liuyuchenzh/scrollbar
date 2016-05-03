@@ -14,8 +14,6 @@ var scrollbar = (function () {
         scrollHeight: 0,
         percentage: 0,
         clickY: 0,
-        // 记录鼠标上一次移动瞬间的位置
-        lastPageY: 0,
         // 记录是否是一次新的拖动
         isNew: true,
         // 记录上次拖动结束的位置
@@ -81,6 +79,9 @@ var scrollbar = (function () {
             scrollTop = scrollTop === "auto" ? 0 : scrollTop;
             return (1 - (this.scrollHeight + /*这里是加号的原因 marginTop本身是0或负数*/parseFloat(scrollTop)) / this.scrollHeight) * (this.viewportHeight - 2 * this.getTop());
         },
+        makeSureInRange: function(min, val, max) {
+            return Math.min(Math.max(val, min), max);
+        },
         bindEvent: function () {
             var self = this;
             var wheelEvent = "onwheel" in document.body ? "wheel" : "onmousewheel" in document.body ? "mousewheel" : "DOMMouseScroll";
@@ -129,26 +130,21 @@ var scrollbar = (function () {
             var self = _scrollbar;
             self.disableSelect();
             var pageY = e.pageY;
-            // 根据当前位置与上一瞬间的位置判断 内容向上还是向下移动
-            var isUp = pageY - self.lastPageY > 0;
-            // 及时更新
-            self.lastPageY = pageY;
             var diff = pageY - self.clickY;
             var maxDiff = self.viewportHeight - self.height - self.getTop() * 2;
             var maxScrollTop = self.scrollHeight - self.viewportHeight;
             diff = diff > maxDiff ? maxDiff : diff;
             var disY = diff / maxDiff * maxScrollTop;
-            self.moveContent("mousemove", disY, isUp);
+            self.moveContent("mousemove", disY);
             self.moveBar();
         },
-        moveContent: function (type, disY, isUp) {
+        moveContent: function (type, disY) {
             var self = this;
             var scrollTop = self.$content.css("margin-top"),
                 scrollTop = scrollTop === "auto" ? 0 : scrollTop,
                 oldScrollTop = -parseFloat(scrollTop),
                 maxScrollTop = self.scrollHeight - self.viewportHeight,
-                newScrollTop,
-                _isUp = typeof isUp !== "undefined" ? isUp : disY > 0;
+                newScrollTop;
             // 如果是mousemove事件 则传进来的disY需要和_scrollbar.originY叠加 
             // 此时 disY直接代表content应当移动的距离
             if (type === "mousemove") {
@@ -160,11 +156,7 @@ var scrollbar = (function () {
                 }
                 oldScrollTop = self.originY;
             }
-            if (_isUp) {
-                newScrollTop = oldScrollTop + disY > maxScrollTop ? maxScrollTop : oldScrollTop + disY;
-            } else {
-                newScrollTop = oldScrollTop + disY < 0 ? 0 : oldScrollTop + disY;
-            }
+            newScrollTop = self.makeSureInRange(0, oldScrollTop + disY, maxScrollTop);
             self.$content.css({
                 marginTop: -newScrollTop
             });
