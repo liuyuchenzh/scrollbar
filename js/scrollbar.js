@@ -14,6 +14,8 @@ var scrollbar = (function () {
         scrollHeight: 0,
         percentage: 0,
         clickY: 0,
+        // 记录鼠标上一次移动瞬间的位置
+        lastPageY: 0,
         // 记录是否是一次新的拖动
         isNew: true,
         // 记录上次拖动结束的位置
@@ -127,22 +129,26 @@ var scrollbar = (function () {
             var self = _scrollbar;
             self.disableSelect();
             var pageY = e.pageY;
+            // 根据当前位置与上一瞬间的位置判断 内容向上还是向下移动
+            var isUp = pageY - self.lastPageY > 0;
+            // 及时更新
+            self.lastPageY = pageY;
             var diff = pageY - self.clickY;
             var maxDiff = self.viewportHeight - self.height - self.getTop() * 2;
             var maxScrollTop = self.scrollHeight - self.viewportHeight;
-            diff = Math.abs(diff) > maxDiff ? maxDiff : diff;
+            diff = diff > maxDiff ? maxDiff : diff;
             var disY = diff / maxDiff * maxScrollTop;
-            self.moveContent("mousemove", disY);
+            self.moveContent("mousemove", disY, isUp);
             self.moveBar();
         },
-        moveContent: function (type, disY) {
+        moveContent: function (type, disY, isUp) {
             var self = this;
             var scrollTop = self.$content.css("margin-top"),
                 scrollTop = scrollTop === "auto" ? 0 : scrollTop,
                 oldScrollTop = -parseFloat(scrollTop),
                 maxScrollTop = self.scrollHeight - self.viewportHeight,
                 newScrollTop,
-                isUp = disY > 0;
+                _isUp = typeof isUp !== "undefined" ? isUp : disY > 0;
             // 如果是mousemove事件 则传进来的disY需要和_scrollbar.originY叠加 
             // 此时 disY直接代表content应当移动的距离
             if (type === "mousemove") {
@@ -154,7 +160,7 @@ var scrollbar = (function () {
                 }
                 oldScrollTop = self.originY;
             }
-            if (isUp) {
+            if (_isUp) {
                 newScrollTop = oldScrollTop + disY > maxScrollTop ? maxScrollTop : oldScrollTop + disY;
             } else {
                 newScrollTop = oldScrollTop + disY < 0 ? 0 : oldScrollTop + disY;
