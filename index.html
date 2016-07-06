@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Test</title>
@@ -8,45 +9,36 @@
             height: 400px;
             border: 1px solid black;
         }
-        
-        .content {
-            height: 1800px;
-        }
     </style>
     <script src="js/jquery-1.12.1.min.js"></script>
     <script src="js/scrollbar.js"></script>
 </head>
+
 <body>
     <div class="container">
         <div class="content">
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
-            this is content<br>
+            this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br>            this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br> this is content<br>
         </div>
     </div>
     <script>
-        scrollbar.setConfig({
+        var s = scrollbar.setup({
             color: "#bbb",
             right: ".5%",
-            top: "5px"
-        }).initModule($(".container"));
+            top: "5px",
+            scrollSpace: 10
+        });
+        s.init(($(".container")));
+        /*
+        setTimeout(function() {
+            var html = $(".content").html();
+            for (var i = 10; i--;) {
+                html += "this is new content<br>"
+            }
+            $(".content").html(html);
+            s.init($(".container"));
+        }, 2000);
+        */
     </script>
 </body>
+
 </html>
