@@ -110,7 +110,7 @@ var scrollbar = (function() {
                     break;
                 case "mousewheel":
                     wheelDelta = e.originalEvent.wheelDelta;
-                    if (disY > 0) {
+                    if (wheelDelta > 0) {
                         disY = -self.scrollSpace
                     } else {
                         disY = self.scrollSpace
