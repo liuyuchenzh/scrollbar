@@ -154,7 +154,6 @@ var scrollbar = (function() {
             self.moveBar();
         },
         moveContent: function(type, disY) {
-            console.log(disY);
             var self = this;
             var scrollTop = self.$content.css("margin-top"),
                 scrollTop = scrollTop === "auto" ? 0 : scrollTop,
@@ -219,6 +218,9 @@ var scrollbar = (function() {
         },
         animateMoveBar(disY, dur, ease) {
             var scrollTop = this.$content.css("margin-top");
+            if (Math.abs(disY) > this.scrollHeight) {
+                disY = disY / Math.abs(disY) * this.scrollHeight;
+            }
             scrollTop = scrollTop === "auto" ? 0 : scrollTop;
             var barMoveDis = -disY / this.scrollHeight * (this.viewportHeight - 2 * parseFloat(this.top));
             this.$bar.animate({
