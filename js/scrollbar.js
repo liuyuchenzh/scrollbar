@@ -217,27 +217,16 @@ var scrollbar = (function() {
                 /* Non-prefixed version, currently */
             });
         },
-        createBlur: function() {
-            var self = this;
-            if (self.$blur) {
-                self.$blur.show();
-                return;
-            }
-            self.$blur = $("<div></div>").addClass("yc-blur")
-                .css({
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    zIndex: 9000,
-                    backgroundColor: "#000",
-                    opacity: 0
-                });
-            self.$container.append(self.$blur);
-        },
-        hideBlur: function() {
-            this.$blur.hide();
+        animateMoveBar(disY, dur, ease) {
+            var scrollTop = this.$content.css("margin-top");
+            scrollTop = scrollTop === "auto" ? 0 : scrollTop;
+            var barMoveDis = -disY / this.scrollHeight * (this.viewportHeight - 2 * parseFloat(this.top));
+            this.$bar.animate({
+                marginTop: barMoveDis
+            }, {
+                duration: dur,
+                easing: ease || "swing"
+            });
         }
     };
 

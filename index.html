@@ -31,11 +31,18 @@
 
         setTimeout(function() {
             var html = $(".content").html();
-            for (var i = 10; i--;) {
+            for (var i = 30; i--;) {
                 html += "this is new content<br>"
             }
             $(".content").html(html);
             s.init($(".container"));
+            $(".content").animate({
+                marginTop: -100
+            }, {
+                duration: 300,
+                easing: "swing"
+            });
+            s.animateMoveBar(-100, 300);
         }, 2000);
     </script>
 </body>
