@@ -1,24 +1,32 @@
 var scrollbar = (function() {
     var _scrollbar = {
         init: function($container) {
-            if (this.$bar) {
-                this.$bar.remove();
-                this.$bar = null;
+            var inited = false;
+            if (!this.$bar) {
+                this.$container = $container;
+                this.adjustCSSforContainer();
+                this.createBar();
+            } else {
+                inited = true;
             }
-            this.$container = $container;
-            this.adjustCSSforContainer();
-            this.createBar();
+            this.detectTransform();
             this.getViewportHeight();
             this.getScrollHeight();
             this.getPercentage();
             this.assignHeight();
-            this.bindEvent();
+            if (!inited) {
+                this.bindEvent();
+            }
+            this.prePosBar();
         },
         adjustCSSforContainer: function() {
             this.$container.css({
                 overflow: "hidden",
                 position: "relative"
             });
+            if (this.fullScreen) {
+                this.$container.height(document.documentElement.clientHeight);
+            }
         },
         createBar: function() {
             this.$bar = $("<div></div>").addClass("yc-scrollbar")
@@ -69,9 +77,12 @@ var scrollbar = (function() {
             return parseFloat(this.top);
         },
         calculateBarPos: function() {
-            var scrollTop = this.$content.css("margin-top");
-            scrollTop = scrollTop === "auto" ? 0 : scrollTop;
+            var scrollTop = this.getElementTop("content");
             return (1 - (this.scrollHeight + /*这里是加号的原因 marginTop本身是0或负数*/ parseFloat(scrollTop)) / this.scrollHeight) * (this.viewportHeight - 2 * this.getTop());
+        },
+        prePosBar: function() {
+            var marginTop = this.calculateBarPos();
+            this.setPos("bar", marginTop);
         },
         makeSureInRange: function(min, val, max) {
             return Math.min(Math.max(val, min), max);
@@ -93,6 +104,13 @@ var scrollbar = (function() {
                 self.recoverSelect();
                 self.isNew = true;
             });
+            if (self.fullScreen === true) {
+                $(window).on("resize", function() {
+                    var screenH = document.documentElement.clientHeight;
+                    self.$container.height(screenH);
+                    self.init();
+                });
+            }
         },
         wheelHandler: function(e) {
             var self = e.data.context;
@@ -130,6 +148,7 @@ var scrollbar = (function() {
             }
             self.moveContent("wheel", disY);
             self.moveBar();
+            self.wheelCb();
         },
         mouseDownHandler: function(e) {
             var self = e.data.context;
@@ -152,12 +171,12 @@ var scrollbar = (function() {
             var disY = diff / maxDiff * maxScrollTop;
             self.moveContent("mousemove", disY);
             self.moveBar();
+            self.mousemoveCb();
         },
         moveContent: function(type, disY) {
             var self = this;
-            var scrollTop = self.$content.css("margin-top"),
-                scrollTop = scrollTop === "auto" ? 0 : scrollTop,
-                oldScrollTop = -parseFloat(scrollTop),
+            var scrollTop = self.getElementTop("content");
+            var oldScrollTop = -parseFloat(scrollTop),
                 maxScrollTop = self.scrollHeight - self.viewportHeight,
                 newScrollTop;
             // 如果是mousemove事件 则传进来的disY需要和this.originY叠加 
@@ -171,16 +190,12 @@ var scrollbar = (function() {
                 }
                 oldScrollTop = self.originY;
             }
-            newScrollTop = self.makeSureInRange(0, oldScrollTop + disY, maxScrollTop);
-            self.$content.css({
-                marginTop: -newScrollTop
-            });
+            newScrollTop = 0 - self.makeSureInRange(0, oldScrollTop + disY, maxScrollTop);
+            self.setPos("content", newScrollTop);
         },
         moveBar: function() {
             var marginTop = this.calculateBarPos();
-            this.$bar.css({
-                marginTop: marginTop
-            });
+            this.setPos("bar", marginTop);
         },
         disableSelect: function() {
             // 拖动时 内容不可选
@@ -216,22 +231,73 @@ var scrollbar = (function() {
                 /* Non-prefixed version, currently */
             });
         },
-        animateMoveBar(disY, dur, ease) {
-            var scrollTop = this.$content.css("margin-top");
+        animateMoveBar: function(disY, dur, ease) {
+            var barMoveDis = this.getBarMoveDis(disY);
+            if (!this.supportTransform) {
+                this.$bar.animate({
+                    marginTop: barMoveDis
+                }, {
+                    duration: dur,
+                    easing: ease || "swing"
+                });
+            } else {
+                this.$bar.animate({ // 印象中jquery不支持translate的animate
+                    transform: "tranlateY(" + barMoveDis + "px)"
+                }, {
+                    duration: dur,
+                    easing: ease || "swing"
+                });
+            }
+        },
+        simpleMoveBar: function(disY) {
+            var barMoveDis = this.getBarMoveDis(disY);
+            this.setPos("bar", barMoveDis);
+        },
+        getBarMoveDis: function(disY) {
+            var scrollTop = this.getElementTop("content");
             if (Math.abs(disY) > this.scrollHeight) {
                 disY = disY / Math.abs(disY) * this.scrollHeight;
             }
-            scrollTop = scrollTop === "auto" ? 0 : scrollTop;
+
             var barMoveDis = -disY / this.scrollHeight * (this.viewportHeight - 2 * parseFloat(this.top));
-            this.$bar.animate({
-                marginTop: barMoveDis
-            }, {
-                duration: dur,
-                easing: ease || "swing"
-            });
+            barMoveDis = barMoveDis + this.height > this.viewportHeight ? (this.viewportHeight - this.height - 2 * parseFloat(this.top)) : barMoveDis;
+            return barMoveDis;
+        },
+        detectTransform: function() {
+            var div = document.createElement("div");
+            if ("transform" in div.style) {
+                this.supportTransform = true;
+            }
+            div = null;
+        },
+        getElementTop: function(el) {
+            var scrollTop;
+            if (!this.supportTransform) {
+                scrollTop = this["$" + el].css("margin-top");
+                scrollTop = scrollTop === "auto" ? 0 : scrollTop;
+            } else {
+                this["$" + el][0].style.transform.replace(/translateY\((-?\d*\.?\d*)px?\)/, function(match, key) {
+                    scrollTop = key || 0;
+                });
+                if (scrollTop === undefined) {
+                    scrollTop = 0;
+                }
+            }
+            return scrollTop;
+        },
+        setPos: function(el, dis) {
+            if (!this.supportTransform) {
+                this["$" + el].css({
+                    marginTop: dis
+                });
+            } else {
+                this["$" + el].css({
+                    transform: "translateY(" + dis + "px)"
+                });
+            }
         }
     };
-
+    
     var S = function(option) {
         this.$bar = null;
         this.$container = null;
@@ -252,6 +318,10 @@ var scrollbar = (function() {
         this.isNew = true;
         // 记录上次拖动结束的位置
         this.originY = 0;
+        this.fullScreen = option.fullScreen !== undefined ? option.fullScreen : false;
+        this.wheelCb = option.wheelCb || function() {};
+        this.mousemoveCb = option.mousemoveCb || function() {};
+        this.supportTransform = false;
     }
 
     S.prototype = _scrollbar;
