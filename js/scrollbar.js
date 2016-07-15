@@ -115,7 +115,7 @@ var scrollbar = (function() {
         wheelHandler: function(e) {
             var self = e.data.context;
             var type = e.type;
-            var disY, wheelDelta;
+            var disY, wheelDelta, dir;
             switch (type) {
                 case "wheel":
                     disY = e.originalEvent.deltaY;
@@ -146,9 +146,17 @@ var scrollbar = (function() {
                 default:
                     throw new Error("没有编写" + type + "这类事件的处理函数");
             }
-            self.moveContent("wheel", disY);
+            if (disY > 0) {
+                dir = "up";
+            } else {
+                dir = "down";
+            }
+            self.beforeDefaultWheelCb(dir);
+            if (!self.customWheel) {
+                self.moveContent("wheel", disY);
+            }
+            self.wheelCb(dir);
             self.moveBar();
-            self.wheelCb();
         },
         mouseDownHandler: function(e) {
             var self = e.data.context;
@@ -297,7 +305,7 @@ var scrollbar = (function() {
             }
         }
     };
-    
+
     var S = function(option) {
         this.$bar = null;
         this.$container = null;
@@ -320,8 +328,10 @@ var scrollbar = (function() {
         this.originY = 0;
         this.fullScreen = option.fullScreen !== undefined ? option.fullScreen : false;
         this.wheelCb = option.wheelCb || function() {};
+        this.beforeDefaultWheelCb = option.beforeDefaultWheelCb || function() {};
         this.mousemoveCb = option.mousemoveCb || function() {};
         this.supportTransform = false;
+        this.customWheel = option.customWheel !== undefined ? option.customWheel : false;
     }
 
     S.prototype = _scrollbar;
