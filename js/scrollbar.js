@@ -170,16 +170,24 @@ var scrollbar = (function() {
         },
         mouseMoveHandler: function(e) {
             var self = e.data.context;
+            var dir;
             self.disableSelect();
             var pageY = e.pageY;
+            var pageYDiff = pageY - self.lastPageY;
+            self.lastPageY = pageY;
             var diff = pageY - self.clickY;
             var maxDiff = self.viewportHeight - self.height - self.getTop() * 2;
             var maxScrollTop = self.scrollHeight - self.viewportHeight;
             diff = diff > maxDiff ? maxDiff : diff;
             var disY = diff / maxDiff * maxScrollTop;
             self.moveContent("mousemove", disY);
+            if (pageYDiff > 0) {
+                dir = "up";
+            } else {
+                dir = "down";
+            }
             self.moveBar();
-            self.mousemoveCb();
+            self.mousemoveCb(dir);
         },
         moveContent: function(type, disY) {
             var self = this;
@@ -326,6 +334,7 @@ var scrollbar = (function() {
         this.isNew = true;
         // 记录上次拖动结束的位置
         this.originY = 0;
+        this.lastPageY = 0;
         this.fullScreen = option.fullScreen !== undefined ? option.fullScreen : false;
         this.wheelCb = option.wheelCb || function() {};
         this.beforeDefaultWheelCb = option.beforeDefaultWheelCb || function() {};
